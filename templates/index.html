@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Bootstrap 实例 - 响应式的列重置</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script>
+        let x = 0;
+        let y = 0;
+        let now_color = 'black';
+        let valid_list = [];
+        $(document).ready(function () {
+            // 画棋盘
+            let col = $('.col');
+            for (var i = 0; i < 8; i++) {
+                for (var j = 0; j < 8; j++) {
+                    col.append('<div class="tile tile-' + (i + j) % 2 + '" id="' + i + j + '"></div>')
+                }
+            }
+            $('#33').append('<div class="piece white-piece"></div>');
+            $('#44').append('<div class="piece white-piece"></div>');
+            $('#34').append('<div class="piece black-piece"></div>');
+            $('#43').append('<div class="piece black-piece"></div>');
+
+            show_vaild_loc();
+
+            // 注册函数
+            // 该函数会在鼠标悬停时调用,获取当前指向的坐标并显示
+            $('.col').on('mouseenter', '.tile', function () {
+                let loc = $(this).attr('id');
+                x = parseInt(loc[0]);
+                y = parseInt(loc[1]);
+                $('#location').text('当前坐标:(' + loc[0] + ',' + loc[1] + ')');
+            });
+
+            // 注册函数
+            // 该函数会在点击时调用,获取当前指向的坐标
+            $('.col').on('click', '.tile', function () {
+                let loc = $(this).attr('id');
+                x = parseInt(loc[0]);
+                y = parseInt(loc[1]);
+                // 判断这里可不可下子
+                let exist = false;
+                for (var i = 0; i < valid_list.length; i++) {
+                    if (valid_list[i][0] == x && valid_list[i][1] == y) {
+                        exist = true;
+                    }
+                }
+                if (!exist) {
+                    return;
+                }
+
+                // $('#' + loc).append('<div class="piece ' + now_color + '-piece"></div>');
+                set_piece();
+
+
+            });
+
+            function set_piece() {
+                let piece = 'X';
+                if (now_color == 'white') {
+                    piece = 'O';
+                }
+                $.get("set_piece?x=" + x + "&y=" + y + "&color=" + piece, function (data, status) {
+                    flush_board();
+                });
+
+            }
+            function shift_color() {
+                if (now_color == 'black') {
+                    now_color = 'white';
+                } else {
+                    now_color = 'black';
+                }
+            }
+
+            function show_vaild_loc() {
+                let piece = 'X';
+                if (now_color == 'white') {
+                    piece = 'O';
+                }
+
+
+                $.get("vaild_loc?color=" + piece, function (data, status) {
+                    valid_list = []
+                    let str = JSON.parse(data);
+
+                    for (var i = 0; i < 8; i++) {
+                        for (var j = 0; j < 8; j++) {
+                            $('#' + i + j).removeClass('valid');
+                        }
+                    }
+
+                    $('#valid').text('当前可用坐标:' + JSON.stringify(str.list));
+                    for (var i = 0; i < str.list.length; i++) {
+                        $('#' + str.list[i][0] + str.list[i][1]).addClass('valid');
+                        valid_list.push([str.list[i][0], str.list[i][1]]);
+                    }
+                });
+            }
+            function flush_board() {
+                $.get("board", function (data, status) {
+                    data = data.list;
+                    for (var i = 0; i < 8; i++) {
+                        for (var j = 0; j < 8; j++) {
+                            $("#" + i + j).empty();
+                            if (data[i][j] == 'X') {
+                                $('#' + i + j).append('<div class="piece black-piece"></div>');
+                            }
+                            if (data[i][j] == 'O') {
+                                $('#' + i + j).append('<div class="piece white-piece"></div>');
+                            }
+                        }
+                    }
+                    shift_color();
+                    show_vaild_loc();
+                });
+            }
+        });
+
+    </script>
+    <style>
+        .tile {
+            width: 50px;
+            height: 50px;
+            float: left;
+        }
+
+        .tile-0 {
+            background-color: goldenrod;
+        }
+
+        .tile-1 {
+            background-color: olive;
+        }
+
+        .valid {
+            background-color: gold;
+        }
+
+        .piece {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            margin: 4%;
+        }
+
+        .white-piece {
+            background-color: white;
+        }
+
+        .black-piece {
+            background-color: black;
+        }
+
+        .col {
+            width: 400px;
+            margin: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="row">
+
+            <div class="col-sm-12" id="title">
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <h1>AlphaOthello</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-8" id="board">
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <h1>棋盘区域</h1>
+                        <div class="col">
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-sm-4" id="board">
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <h1>信息</h1>
+                        <p id="location">当前坐标:(0,0)</p>
+                        <p id="valid">当前可用坐标:</p>
+                    </div>
+
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+</body>
+
+</html>
