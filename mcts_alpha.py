@@ -45,7 +45,7 @@ class MonteCarlo:
     def __init__(self, policy_value_net):
         self.policy_value_net = policy_value_net
 
-    def search(self, board, color):
+    def search(self, board, color, time_limit):
         # board: 当前棋局
         # color: 当前玩家
 
@@ -63,7 +63,7 @@ class MonteCarlo:
         # 考虑时间限制,这个函数要改改
         try:
             # 测试程序规定每一步在60s以内
-            func_timeout(5, self.whileFunc, args=[root])
+            func_timeout(time_limit, self.whileFunc, args=[root])
         except FunctionTimedOut:
             pass
 

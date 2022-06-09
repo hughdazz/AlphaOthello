@@ -7,6 +7,7 @@ import keras.backend as K
 
 import numpy as np
 
+import pickle
 
 class PolicyValueNet:
     def __init__(self):
@@ -89,11 +90,20 @@ class PolicyValueNet:
         # 最终返回loss,entropy作为训练结果
         return loss[0], entropy
 
+    def get_policy_param(self):
+        net_params = self.model.get_weights()        
+        return net_params
+
+
     def save_model(self, model_file):
         """
         保存模型参数到文件 
+        keras自带的save_weights方法有问题改用pickle
         """
-        self.model.save_weights(model_file)
+        net_params = self.get_policy_param()
+        pickle.dump(net_params, open(model_file, 'wb'), protocol=2)
 
     def load_model(self, model_file):
-        self.model.load_weights(model_file, by_name=True)
+        net_params = pickle.load(open(model_file, 'rb'))
+        self.model.set_weights(net_params)
+

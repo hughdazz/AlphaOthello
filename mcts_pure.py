@@ -10,16 +10,16 @@ from math import log, sqrt
 
 class Node:
     def __init__(self, board, parent, color, action):
-        self.parent = parent # 父节点
-        self.children = [] # 子节点列表
-        self.visit_times = 0 # 访问次数
-        self.board = board # 游戏选择这个Node的时的棋盘
-        self.color = color # 当前玩家
-        self.prevAction = action # 到达这个节点的落子坐标
-        self.unvisitActions = board.get_vaild_loc(color) # 未访问过的actions
-        self.isover = self.gameover(board) # 是否结束了
-        if (self.isover == False) and (len(self.unvisitActions) == 0): # 没得走了但游戏还没结束
-            self.unvisitActions.append("noway") #?
+        self.parent = parent  # 父节点
+        self.children = []  # 子节点列表
+        self.visit_times = 0  # 访问次数
+        self.board = board  # 游戏选择这个Node的时的棋盘
+        self.color = color  # 当前玩家
+        self.prevAction = action  # 到达这个节点的落子坐标
+        self.unvisitActions = board.get_vaild_loc(color)  # 未访问过的actions
+        self.isover = self.gameover(board)  # 是否结束了
+        if (self.isover == False) and (len(self.unvisitActions) == 0):  # 没得走了但游戏还没结束
+            self.unvisitActions.append("noway")  # ?
 
         self.reward = {'X': 0, 'O': 0}
         self.bestVal = {'X': 0, 'O': 0}
@@ -27,22 +27,28 @@ class Node:
     def gameover(self, board):
         l1 = board.get_vaild_loc('X')
         l2 = board.get_vaild_loc('O')
-        return len(l1)==0 and len(l2)==0
+        return len(l1) == 0 and len(l2) == 0
 
     # 根据UCT公式计算最佳节点
-    def calcBestVal(self, balance, color):
+    def calcBestVal(self, color):
 
-        self.bestVal[color] = self.reward[color] / self.visit_times + balance * sqrt(2 * log(self.parent.visit_times) / self.visit_times)
+        self.bestVal[color] = self.reward[color] / self.visit_times + \
+            sqrt(2 * log(self.parent.visit_times) / self.visit_times)
+
 
 class MonteCarlo:
+    def __init__(self):
+        self.root = None
+        self.now_color = None
     # uct方法的实现
     # return: action(string)
-    def search(self, board, color): 
+
+    def search(self, board, color, time_limit):
         # board: 当前棋局
         # color: 当前玩家
-
+        self.now_color = color
         # 特殊情况：只有一种选择
-        valid_loc=board.get_vaild_loc(color)
+        valid_loc = board.get_vaild_loc(color)
         if len(valid_loc) == 1:
             return valid_loc[0]
 
@@ -51,11 +57,11 @@ class MonteCarlo:
         # 创建根节点
         # 根节点parent,action都为None
         root = Node(newboard, None, color, None)
-
+        self.root = root
         # 考虑时间限制,这个函数要改改
         try:
             # 测试程序规定每一步在60s以内
-            func_timeout(5, self.whileFunc, args=[root]) 
+            func_timeout(time_limit, self.whileFunc, args=[root])
         except FunctionTimedOut:
             pass
         # 这里有误,MCTS选择的是走的最多的节点
@@ -64,11 +70,10 @@ class MonteCarlo:
         action = None
         visits = 0
         for child in root.children:
-            if child.visit_times>visits:
+            if child.visit_times > visits:
                 action = child.prevAction
         return action
 
-    
     def whileFunc(self, root):
         while True:
             # mcts的步骤
@@ -79,7 +84,6 @@ class MonteCarlo:
             reward = self.default_policy(expand_node.board, expand_node.color)
             # backpropagation回溯,更新沿途节点信息
             self.backup(expand_node, reward)
-
 
     def expand(self, node):
         """ 
@@ -97,19 +101,20 @@ class MonteCarlo:
         else:
             pass
 
-        newColor = 'X' if node.color=='O' else 'O'
-        newNode = Node(newBoard,node,newColor,action)
+        newColor = 'X' if node.color == 'O' else 'O'
+        newNode = Node(newBoard, node, newColor, action)
         node.children.append(newNode)
 
         return newNode
-    
-    def best_child(self, node, balance, color):
+
+    def best_child(self, node, color):
         # 对每个子节点调用一次计算bestValue
         for child in node.children:
-            child.calcBestVal(balance, color)
+            child.calcBestVal(color)
 
         # 对子节点按照bestValue排序，降序
-        sortedChildren = sorted(node.children, key=lambda x: x.bestVal[color], reverse = True)
+        sortedChildren = sorted(
+            node.children, key=lambda x: x.bestVal[color], reverse=True)
 
         # 返回bestValue最大的元素
         return sortedChildren[0]
@@ -122,12 +127,12 @@ class MonteCarlo:
         """
         retNode = node
         while not retNode.isover:
-            if len(retNode.unvisitActions)>0:
+            if len(retNode.unvisitActions) > 0:
                 # 还有未展开的节点,则进行扩展
                 return self.expand(retNode)
             else:
                 # 选择val最大的
-                retNode = self.best_child(retNode, math.sqrt(2), retNode.color)
+                retNode = self.best_child(retNode, retNode.color)
 
         return retNode
 
@@ -145,7 +150,7 @@ class MonteCarlo:
         def gameover(board):
             l1 = board.get_vaild_loc('X')
             l2 = board.get_vaild_loc('O')
-            return len(l1)==0 and len(l2)==0
+            return len(l1) == 0 and len(l2) == 0
 
         while not gameover(newBoard):
             actions = newBoard.get_vaild_loc(newColor)
@@ -154,14 +159,14 @@ class MonteCarlo:
                 action = None
             else:
                 action = random.choice(actions)
-            
+
             if action is None:
                 pass
             else:
-                newBoard.set_piece(action,newColor)
-            
-            newColor = 'X' if newColor=='O' else 'O'
-        
+                newBoard.set_piece(action, newColor)
+
+            newColor = 'X' if newColor == 'O' else 'O'
+
         # 1黑 -1白 0平局
         winner = newBoard.get_winner()
         return winner
@@ -186,4 +191,9 @@ class MonteCarlo:
 
             newNode = newNode.parent
 
-        
+    # 用于train
+    def get_probs(self):
+        probs = []
+        for node in self.root.children:
+            probs.append((node.prevAction, node.bestVal[self.now_color]))
+        return probs
